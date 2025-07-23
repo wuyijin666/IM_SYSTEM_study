@@ -59,12 +59,10 @@ func (this *Server) ListenMessger() {
 func (this *Server) Handler(conn net.Conn) {
 	// 当前建立的链接
 	//fmt.Println("链接建立成功")
-	user := NewUser(conn)
+	user := NewUser(conn, this)
 
 	// 用户上线，将用户保存到OnlineMap中
-	this.mapLock.Lock()
-	this.OnlineMap[user.Name] = user
-	this.mapLock.Unlock()
+	user.OnLine()
     
 	// 广播当前上线的用户
 	this.BroadCast(user, "已上线")
@@ -78,7 +76,8 @@ func (this *Server) Handler(conn net.Conn) {
 		for {
 			msg , err := reader.ReadString('\n')
 			if err == io.EOF {
-				fmt.Println("客户端 %s 已下线\n", user.Name)
+				// 用户下线
+				user.OffLine()
 				return
 			}
 
@@ -94,7 +93,7 @@ func (this *Server) Handler(conn net.Conn) {
 				continue
 			}
 			// 广播用户发送的消息
-			this.BroadCast(user, msg)
+			user.DoMessage(msg)
 		   }
 		}()
 
