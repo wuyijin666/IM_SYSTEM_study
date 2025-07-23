@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
+	"strings"
 	"sync"
+	"bufio"
 )
 
 type Server struct {
@@ -65,12 +68,41 @@ func (this *Server) Handler(conn net.Conn) {
     
 	// 广播当前上线的用户
 	this.BroadCast(user, "已上线")
+	fmt.Printf("[Server] 用户 %s 上线了\n", user.Name)
 
-	fmt.Printf("[Server] 用户 %s 已上线\n", user.Name)
+
+	// 接收客户端发送的消息
+	go func() {
+		reader := bufio.NewReader(conn)
+	    
+		for {
+			msg , err := reader.ReadString('\n')
+			if err == io.EOF {
+				fmt.Println("客户端 %s 已下线\n", user.Name)
+				return
+			}
+
+			if err != nil {
+				fmt.Println("Read err:", err)
+				return 
+			}
+
+			// 提取用户消息 字节转字符 （去掉最后一位\n)
+			msg = strings.TrimSuffix(msg, "\n")
+
+			if msg == "" {
+				continue
+			}
+			// 广播用户发送的消息
+			this.BroadCast(user, msg)
+		   }
+		}()
 
 	// 当前handler阻塞
 	select {}
 }
+
+
 
 // 启动服务器的接口
 func (this *Server) Start() {
